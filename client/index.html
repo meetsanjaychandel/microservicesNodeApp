@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat App</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Chat App</h1>
+
+    <!-- User Registration Form -->
+    <h2>User Registration</h2>
+    <form id="userForm">
+        <label for="userId">User ID:</label>
+        <input id="userId" type="text" required><br>
+        <label for="userName">User Name:</label>
+        <input id="userName" type="text" required><br>
+        <button type="submit">Register</button>
+    </form><br/>
+
+    <!-- Chat Interface -->
+    <h2>Chat Interface</h2>
+    <div style="color: royalblue; background-color: rgb(230, 137, 222);" id="messages">New Message: </div><br/>
+    <input id="messageInput" type="text"><br/>
+    <button id="sendButton">Send</button><br/>
+ 
+    <!-- Button to trigger the /notify endpoint -->
+    <!-- <button id="notifyButton">Notify Server</button> -->
+
+    <script>
+        // Establish WebSocket connection with Notification Service
+        const socket = io('http://localhost:3003');
+
+        // Function to handle user registration form submission
+        document.getElementById('userForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const userName = document.getElementById('userName').value;
+            fetch('http://localhost:3000/users', {
+                method: 'POST',
+                mode: 'cors', 
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ id: userId, name: userName }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('User registered successfully:', data);
+            })
+            .catch(error => {
+                console.error('Error registering user:', error);
+            });
+        });
+
+
+        // Function to handle sending messages
+        document.getElementById('sendButton').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value;
+            const userId = document.getElementById('userId').value;
+            fetch('http://localhost:3000/messages', {
+                method: 'POST',
+                mode: 'cors', 
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ channelId: 'general', message }),
+            
+            });
+            fetch('http://localhost:3003/notify', {
+                method: 'POST',
+                mode: 'cors', 
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId, message }),
+            
+            });
+        });
+
+
+        // Listen for real-time notification
+        socket.on('connect', () => {
+            console.log('Connected to Notification Service');
+        });
+
+        // Listen for incoming messages from the Notification Service
+        socket.on('notification', (data) => {
+            const messagesDiv = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.textContent = data.message;
+            messagesDiv.appendChild(messageElement);
+        });
+    </script>
+</body>
+</html>
